@@ -65,3 +65,27 @@ def test_display_is_human_readable():
     text = keys.display("Ctrl+Print")
     assert "Print" in text or "PrtSc" in text or "Prt" in text
     assert keys.display("") == ""
+
+
+@pytest.mark.parametrize("platform", ["darwin", "win32"])
+def test_recorded_key_prefers_physical_key(monkeypatch, platform):
+    monkeypatch.setattr(keys.sys, "platform", platform)
+    nine = 0x19 if platform == "darwin" else 0x39
+    # Shift+9 arrives as "(" from Qt; the physical key wins.
+    assert keys.recorded_key(K.Key_ParenLeft.value, nine) == K.Key_9.value
+
+
+@pytest.mark.parametrize("platform", ["darwin", "win32"])
+def test_recorded_key_ignores_missing_native_code(monkeypatch, platform):
+    monkeypatch.setattr(keys.sys, "platform", platform)
+    # Synthesized events carry native code 0 (the "A" key on macOS).
+    assert keys.recorded_key(K.Key_K.value, 0) == K.Key_K.value
+    assert keys.recorded_key(K.Key_Tab.value, 0) == K.Key_Tab.value
+    assert keys.recorded_key(K.Key_A.value, 0) == K.Key_A.value
+
+
+def test_recorded_key_real_a_on_mac(monkeypatch):
+    monkeypatch.setattr(keys.sys, "platform", "darwin")
+    assert keys.recorded_key(K.Key_A.value, 0x00) == K.Key_A.value
+    # A key Qt cannot name (e.g. a dead key) still maps by position.
+    assert keys.recorded_key(K.Key_unknown.value, 0x00) == K.Key_A.value

@@ -177,8 +177,7 @@ class HotkeyEdit(QLineEdit):
         if key in _MODIFIER_KEY_VALUES:
             self._show_partial(mods)
             return
-        native = keys.key_from_native(e.nativeVirtualKey())
-        self._commit(native if native is not None else key, mods)
+        self._commit(keys.recorded_key(key, e.nativeVirtualKey()), mods)
 
     def keyReleaseEvent(self, e: QKeyEvent) -> None:
         if not self._recording:

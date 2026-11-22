@@ -223,3 +223,23 @@ def key_from_native(native_virtual_key: int) -> int | None:
     if sys.platform == "win32":
         return _WIN_VK_REVERSE.get(native_virtual_key)
     return None
+
+
+def recorded_key(qt_key: int, native_virtual_key: int) -> int:
+    """The key to store for a key press while recording a hotkey.
+
+    Prefers the physical key (so Shift+9 is not stored as "Shift+("), but
+    falls back to Qt's key when the native code is missing. Synthesized events
+    report native code 0, which on macOS is also the code of the "A" key, so a
+    0 is only trusted there when Qt agrees that the key is A.
+    """
+    native = key_from_native(native_virtual_key)
+    if native is None:
+        return qt_key
+    if native_virtual_key == 0 and qt_key != native and qt_key in _known_keys():
+        return qt_key
+    return native
+
+
+def _known_keys() -> set[int]:
+    return set(MAC_KEYCODE if sys.platform == "darwin" else WIN_VK)
