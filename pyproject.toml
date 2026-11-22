@@ -1,0 +1,40 @@
+[project]
+name = "screenshotbuffer"
+version = "0.1.0"
+description = "Keeps a rolling buffer of your screen and copies what was shown a few seconds ago to the clipboard."
+readme = "README.md"
+authors = [
+    { name = "Edward Rusli", email = "43808831+edward3423@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "lz4>=4.4.5",
+    "mss>=10.2.0",
+    "pyobjc-framework-cocoa>=13.0 ; sys_platform == 'darwin'",
+    "pyobjc-framework-quartz>=13.0 ; sys_platform == 'darwin'",
+    "pyside6-essentials>=6.12.0",
+]
+
+[project.gui-scripts]
+screenshotbuffer = "screenshotbuffer:main"
+
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
