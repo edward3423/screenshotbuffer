@@ -14,7 +14,7 @@ from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QImage, QKeySe
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon, QWidget
 
-from . import config, native
+from . import __version__, config, native
 from .buffer import FrameBuffer, Pixels
 from .capture import CaptureTarget, CaptureWorker
 from .config import (
@@ -592,32 +592,53 @@ def _server_name() -> str:
     return f"screenshotbuffer-{user}"
 
 
-def main() -> int:
+def _send_to_running_instance(command: bytes, timeout_ms: int = 500) -> bool:
+    """Deliver a command to an already running instance. False if none is running."""
+    sock = QLocalSocket()
+    sock.connectToServer(_server_name())
+    if not sock.waitForConnected(timeout_ms):
+        return False
+    sock.write(command)
+    sock.waitForBytesWritten(timeout_ms)
+    sock.disconnectFromServer()
+    return True
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv if argv is None else argv)
+    if "--self-test" in args:
+        from .selftest import run as run_self_test
+
+        i = args.index("--self-test")
+        return run_self_test(args[i + 1] if i + 1 < len(args) else None)
+
     if sys.platform == "win32":
         import ctypes
 
         with contextlib.suppress(Exception):
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ScreenshotBuffer.App")
 
-    qapp = QApplication(sys.argv)
+    qapp = QApplication(args)
     qapp.setApplicationName("ScreenshotBuffer")
     qapp.setApplicationDisplayName(APP_NAME)
+    qapp.setApplicationVersion(__version__)
     qapp.setQuitOnLastWindowClosed(False)
     qapp.setWindowIcon(style.app_icon())
+
+    if "--quit" in args:
+        # Used by the installers to stop a running copy before replacing it.
+        # Nothing running is fine too: either way no instance is left.
+        _send_to_running_instance(b"quit")
+        return 0
 
     store = SettingsStore()
     _setup_logging(store)
 
     # Single instance: a second launch just opens the running instance's settings.
-    name = _server_name()
-    probe = QLocalSocket()
-    probe.connectToServer(name)
-    if probe.waitForConnected(300):
-        probe.write(b"show")
-        probe.waitForBytesWritten(300)
-        probe.disconnectFromServer()
+    if _send_to_running_instance(b"show"):
         log.info("Already running; asked the existing instance to show its settings")
         return 0
+    name = _server_name()
     QLocalServer.removeServer(name)
     server = QLocalServer()
     server.listen(name)
@@ -625,13 +646,24 @@ def main() -> int:
     if not QSystemTrayIcon.isSystemTrayAvailable():
         log.warning("No system tray available; opening the settings window instead")
 
+    log.info("Screenshot Buffer %s starting", __version__)
     app = App(qapp, store)
 
     def on_connection() -> None:
         sock = server.nextPendingConnection()
-        if sock is not None:
-            sock.disconnected.connect(sock.deleteLater)
-            app.show_settings()
+        if sock is None:
+            return
+        sock.disconnected.connect(sock.deleteLater)
+
+        def on_message() -> None:
+            command = bytes(sock.readAll().data()).strip()
+            if command == b"quit":
+                log.info("Quit requested by another process")
+                app.quit()
+            else:
+                app.show_settings()
+
+        sock.readyRead.connect(on_message)
 
     server.newConnection.connect(on_connection)
     app.start()

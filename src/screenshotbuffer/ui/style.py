@@ -26,7 +26,7 @@ def ui_font(point_size: float, bold: bool = False) -> QFont:
     return f
 
 
-def _draw_icon(size: int, color: QColor, paused: bool) -> QPixmap:
+def draw_icon(size: int, color: QColor, paused: bool) -> QPixmap:
     pm = QPixmap(size, size)
     pm.fill(Qt.GlobalColor.transparent)
     p = QPainter(pm)
@@ -75,10 +75,10 @@ def app_icon(paused: bool = False, tray: bool = False) -> QIcon:
     if tray and sys.platform == "darwin":
         # Template image: macOS tints it to match the menu bar.
         for size in (16, 32, 44):
-            icon.addPixmap(_draw_icon(size, QColor(0, 0, 0), paused))
+            icon.addPixmap(draw_icon(size, QColor(0, 0, 0), paused))
         icon.setIsMask(True)
         return icon
     color = QColor(0x9A, 0x9E, 0xA6) if paused else ACCENT
     for size in (16, 20, 24, 32, 40, 48, 64, 128, 256):
-        icon.addPixmap(_draw_icon(size, color, paused))
+        icon.addPixmap(draw_icon(size, color, paused))
     return icon

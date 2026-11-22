@@ -1,6 +1,8 @@
-"""End-to-end test on a real Windows desktop.
+r"""End-to-end test on a real Windows desktop.
 
-Run with:  uv run python tests/e2e/run_e2e_windows.py
+Run with:  uv run python tests/e2e/run_e2e_windows.py [--exe PATH\TO\ScreenshotBuffer.exe]
+
+Without --exe it tests the source tree; with it, a built app.
 
 It launches the real app (separate process, temporary settings), shows a
 window whose color changes on a known schedule, presses the real global
@@ -164,8 +166,12 @@ def main() -> int:
     (cfg / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
     env = dict(os.environ, SCREENSHOTBUFFER_CONFIG_DIR=str(cfg))
     env.pop("SCREENSHOTBUFFER_SHOW_IN_CAPTURE", None)
+    if "--exe" in sys.argv:
+        command = [sys.argv[sys.argv.index("--exe") + 1]]
+    else:
+        command = [sys.executable, "-m", "screenshotbuffer"]
     proc = subprocess.Popen(
-        [sys.executable, "-m", "screenshotbuffer"],
+        command,
         cwd=ROOT,
         env=env,
         stdout=subprocess.PIPE,

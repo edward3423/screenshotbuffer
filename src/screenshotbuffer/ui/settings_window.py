@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import config
+from .. import __version__, config
 from ..config import ACTION_LABELS, ACTIONS
 from ..hotkeys import keys
 from .hotkey_edit import HotkeyEdit
@@ -181,6 +181,8 @@ class SettingsWindow(QWidget):
         quit_btn = QPushButton("Quit Screenshot Buffer")
         quit_btn.clicked.connect(app.quit)
         bottom.addWidget(quit_btn)
+        bottom.addSpacing(8)
+        bottom.addWidget(_hint(f"Version {__version__}"))
         bottom.addStretch(1)
         close_btn = QPushButton("Close")
         close_btn.setDefault(True)
