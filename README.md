@@ -130,6 +130,7 @@ Settings and a log file live in `%APPDATA%\ScreenshotBuffer` (Windows) or
 uv run pytest                                   # unit tests
 uv run ruff check src tests && uv run ruff format --check src tests
 uv run python tests/e2e/run_e2e_windows.py      # end-to-end on a real Windows desktop
+uv run python tests/e2e/run_e2e_macos.py        # end-to-end on a real Mac (--no-keys: without Accessibility)
 uv run python tests/e2e/ui_tour.py OUT_DIR      # screenshots of every UI surface
 ```
 

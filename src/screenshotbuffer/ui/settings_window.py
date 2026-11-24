@@ -235,6 +235,14 @@ class SettingsWindow(QWidget):
         status_row = QHBoxLayout()
         self.stats = QLabel()
         self.stats.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        # The text grows as the buffer fills; reserve room for a full buffer so
+        # it is never clipped, and wrap anything longer (e.g. a capture error).
+        self.stats.setWordWrap(True)
+        self.stats.setMinimumWidth(
+            self.stats.fontMetrics().horizontalAdvance(
+                "9999 frames, 999.9 MB, 999.9 s of history  |  60.0 fps, 999 ms per capture"
+            )
+        )
         status_row.addWidget(self.stats, 1)
         self.pause_btn = QPushButton()
         self.pause_btn.clicked.connect(self._app.toggle_pause)
