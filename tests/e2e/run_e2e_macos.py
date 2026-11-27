@@ -23,6 +23,8 @@ verifies:
   2. The clipboard image has the region's size (in physical pixels).
   3. The preview window overlapping the region is not in the image.
   4. Cmd+Shift+0 hides and shows the preview window, and that is persisted.
+  5. Copying (which shows the notification) does not take focus from the
+     active app (out of process only).
 
 The terminal needs Screen Recording permission. The user's clipboard is saved
 before and restored afterwards. Nothing should cover the test window.
@@ -40,6 +42,7 @@ import time
 from pathlib import Path
 
 import Quartz
+from AppKit import NSApplication, NSWorkspace
 from PySide6.QtCore import QMimeData, QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QGuiApplication, QPainter
 from PySide6.QtWidgets import QApplication, QWidget
@@ -131,6 +134,10 @@ def wait_until(app: QApplication, pred, timeout: float) -> bool:
             return True
         time.sleep(0.02)
     return False
+
+
+def frontmost_pid() -> int:
+    return int(NSWorkspace.sharedWorkspace().frontmostApplication().processIdentifier())
 
 
 def snapshot_clipboard() -> QMimeData:
@@ -239,7 +246,8 @@ def main() -> int:
         "show_region_outline": True,
         "preview_visible": True,
         "preview_geometry": preview,
-        "notify_on_copy": "never",
+        # Show the notification on every copy: it must not take focus.
+        "notify_on_copy": "always",
     }
     (cfg / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
     target = InProcess(cfg, qapp) if no_keys else OutOfProcess(cfg)
@@ -255,6 +263,11 @@ def main() -> int:
         wait(qapp, DELAY + 1.5)  # let the buffer fill
 
         for attempt in range(3):
+            if not no_keys:
+                # Be the active app, like whatever the user is working in.
+                NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+                win.activateWindow()
+                wait_until(qapp, lambda: frontmost_pid() == os.getpid(), 1)
             # Press when `now - DELAY` is in the middle of a color period.
             phase = ((time.monotonic() - DELAY) - win.start) % PERIOD
             wait(qapp, (PERIOD / 2 - phase) % PERIOD)
@@ -285,6 +298,10 @@ def main() -> int:
                         f"(current color {current.name()})"
                     )
             print(f"copy {attempt}: expected {expected.name()}, got {left.name()} / {under_preview.name()}")
+            if not no_keys:
+                wait(qapp, 0.3)
+                if frontmost_pid() == target.pid:
+                    failures.append(f"attempt {attempt}: copying made Screenshot Buffer the active app")
             if attempt == 0 and "--save" in sys.argv:
                 img.save(sys.argv[sys.argv.index("--save") + 1])
             wait(qapp, 0.3)

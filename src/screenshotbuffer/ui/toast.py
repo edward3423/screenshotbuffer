@@ -65,7 +65,7 @@ class Toast(QWidget):
         area = QGuiApplication.primaryScreen().availableGeometry()
         self.move(QPoint(area.left() + MARGIN, area.top() + MARGIN))
         self.show()
-        self.raise_()
+        native.raise_without_activating(self)
         self.update()
         self._timer.start(ms)
 

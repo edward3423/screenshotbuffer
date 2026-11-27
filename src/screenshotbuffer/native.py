@@ -95,6 +95,22 @@ def float_above_everything(widget: QWidget, level: int = LEVEL_STATUS) -> None:
     QTimer.singleShot(0, apply)
 
 
+def raise_without_activating(widget: QWidget) -> None:
+    """Stack the window above others without taking focus from the active app.
+
+    On macOS QWidget.raise_() also activates the whole application
+    (Qt's QT_MAC_SET_RAISE_PROCESS default), which defocuses whatever the
+    user is working in.
+    """
+    if IS_MAC:
+        try:
+            _ns_window(widget).orderFrontRegardless()
+            return
+        except Exception:
+            log.exception("Could not order window front")
+    widget.raise_()
+
+
 def make_background_app() -> None:
     """macOS: run as a menu-bar app without a Dock icon."""
     if not IS_MAC:
