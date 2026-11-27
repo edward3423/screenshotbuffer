@@ -1,6 +1,6 @@
 [project]
 name = "screenshotbuffer"
-version = "0.1.0"
+version = "0.1.1"
 description = "Keeps a rolling buffer of your screen and copies what was shown a few seconds ago to the clipboard."
 readme = "README.md"
 authors = [
